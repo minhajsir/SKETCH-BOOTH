@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Media Photo Sketcher</title>
+    <!-- Load Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+        /* Custom Styles for Funky 3D Text Effect */
+        .funky-3d-text-top {
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 1.5rem; /* Reduced size */
+            line-height: 1.2;
+            text-align: center;
+            color: #ffffff; /* White color */
+        }
+        .funky-3d-text-bottom {
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 1.75rem; /* Reduced size, slightly larger than top */
+            line-height: 1.2;
+            text-align: center;
+            /* Base red color */
+            color: #f87171; /* Tailwind red-400 equivalent */
+            
+            /* Complex text-shadow for 3D/Popout/Funky Look */
+            text-shadow:
+                /* Drop Shadow (Black) */
+                3px 3px 0 rgba(0, 0, 0, 0.4),
+                /* Inner Layer 1 (Yellow) */
+                -1px -1px 0 #facc15, /* Tailwind yellow-400 equivalent */
+                -2px -2px 0 #eab308, /* Tailwind yellow-500 equivalent */
+                /* Outer Popout (Red-Darker) */
+                4px 4px 0 #ef4444, /* Tailwind red-500 equivalent */
+                5px 5px 0 #b91c1c; /* Tailwind red-700 equivalent */
+        }
+
+        /* Responsive adjustments for large screens */
+        @media (min-width: 768px) {
+            .funky-3d-text-top {
+                font-size: 2.5rem;
+            }
+            .funky-3d-text-bottom {
+                font-size: 3rem;
+            }
+        }
+
+        /* Ensure the video element is responsive */
+        #videoElement {
+            width: 100%;
+            height: auto;
+            max-height: 60vh;
+            border-radius: 1rem;
+            object-fit: cover;
+        }
+
+        /* Styling for the loading spinner */
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #f97316;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Custom styling for the result stage background */
+        #stageResult.dark-background {
+            background-color: #000; /* Dark black background */
+            padding: 1.5rem; /* Consistent padding */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8 flex justify-center items-center">
+
+    <div id="appContainer" class="w-full max-w-lg bg-white shadow-2xl rounded-xl p-6 md:p-8 space-y-6">
+        <h1 class="text-3xl font-extrabold text-center text-red-600">Digital Media Photo Booth</h1>
+        <p id="statusMessage" class="text-center text-gray-600 transition-all duration-300">
+            Step 1: Click "Launch Camera" to begin your photo capture and sketch transformation!
+        </p>
+
+        <!-- Main Content Area --><div id="stageCapture" class="flex flex-col items-center space-y-4">
+            <video id="videoElement" autoplay playsinline class="hidden border-4 border-gray-200"></video>
+            <canvas id="canvasElement" class="hidden"></canvas>
+            
+            <button id="launchCameraBtn" onclick="launchCamera()" class="w-full md:w-auto px-8 py-3 bg-red-600 text-white font-bold rounded-full shadow-lg hover:bg-red-700 transition duration-300 transform hover:scale-105">
+                Launch Camera
+            </button>
+            <button id="captureBtn" onclick="capturePhoto()" class="hidden w-full md:w-auto px-8 py-3 bg-green-500 text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition duration-300 transform hover:scale-105">
+                Capture Photo
+            </button>
+        </div>
+
+        <!-- Processing Stage --><div id="stageProcessing" class="hidden flex-col items-center justify-center p-8 space-y-4">
+            <div class="spinner"></div>
+            <p class="text-xl font-semibold text-orange-600">Applying beautiful sketch style...</p>
+            <p class="text-sm text-gray-500 text-center">Your photo is being uploaded and processed by the AI model to create a unique sketch art effect.</p>
+        </div>
+
+        <!-- Result Stage --><div id="stageResult" class="hidden flex-col items-center p-6 dark-background rounded-xl space-y-4">
+            
+            <!-- "Welcome to" text above the image --><div class="p-2 text-center w-full bg-black rounded-t-xl">
+                <h2 class="funky-3d-text-top">
+                    Welcome to 
+                </h2>
+            </div>
+
+            <img id="resultImage" src="" alt="Sketch Style Portrait" class="w-full max-w-sm rounded-b-xl shadow-2xl border-4 border-red-300 z-0">
+            
+            <!-- "School of Digital media and Communication" text below the image --><div class="p-4 pt-6 text-center w-full">
+                <h2 class="funky-3d-text-bottom">
+                    School for Digital media and Communication
+                </h2>
+            </div>
+            
+            <button id="resetBtn" onclick="resetApp()" class="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">
+                Take Another Photo
+            </button>
+        </div>
+
+        <!-- Custom Error/Message Modal --><div id="messageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full space-y-4">
+                <h3 class="text-xl font-bold text-red-600" id="modalTitle">Error</h3>
+                <p id="modalBody" class="text-gray-700">An unexpected error occurred.</p>
+                <button onclick="closeModal()" class="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // Firebase dependencies for mandatory environment setup
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+        const apiKey = ""; // API Key will be handled by the environment
+
+        let app, db, auth;
+        let videoStream = null;
+
+        const videoElement = document.getElementById('videoElement');
+        const canvasElement = document.getElementById('canvasElement');
+        const launchCameraBtn = document.getElementById('launchCameraBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const stageCapture = document.getElementById('stageCapture');
+        const stageProcessing = document.getElementById('stageProcessing');
+        const stageResult = document.getElementById('stageResult');
+        const resultImage = document.getElementById('resultImage');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // --- Utility Functions ---
+
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = message;
+            document.getElementById('messageModal').classList.remove('hidden');
+        }
+
+        window.closeModal = function() {
+            document.getElementById('messageModal').classList.add('hidden');
+        }
+
+        function updateStatus(message, colorClass = 'text-gray-600') {
+            statusMessage.className = `text-center font-medium ${colorClass} transition-all duration-300`;
+            statusMessage.textContent = message;
+        }
+
+        function showStage(stageId) {
+            const stages = [stageCapture, stageProcessing, stageResult];
+            stages.forEach(stage => {
+                if (stage.id === stageId) {
+                    stage.classList.remove('hidden');
+                    stage.classList.add('flex');
+                } else {
+                    stage.classList.add('hidden');
+                    stage.classList.remove('flex');
+                }
+            });
+        }
+
+        // --- Firebase Initialization (Mandatory Environment Setup) ---
+
+        async function initializeFirebase() {
+            if (Object.keys(firebaseConfig).length === 0) {
+                console.error("Firebase configuration is missing.");
+                return;
+            }
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                console.log("Firebase initialized and user signed in.");
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+            }
+        }
+
+        // --- Camera & Capture Logic ---
+        
+        window.launchCamera = async function() {
+            updateStatus("Accessing camera...");
+            try {
+                videoElement.classList.add('hidden'); // Ensure video is hidden before stream starts
+                videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true 
+                });
+                
+                videoElement.srcObject = videoStream;
+                
+                // Once the video starts playing, update the UI
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                    videoElement.classList.remove('hidden'); // Show video once it's playing
+                    launchCameraBtn.classList.add('hidden');
+                    captureBtn.classList.remove('hidden');
+                    updateStatus("Step 2: Pose and click 'Capture Photo'!", 'text-green-600');
+                };
+
+            } catch (error) {
+                console.error("Camera access failed:", error);
+                showModal("Camera Error", "Could not access the camera. Please ensure permissions are granted and try again. Error: " + error.name);
+                updateStatus("Camera access denied or failed.", 'text-red-600');
+            }
+        };
+
+        window.capturePhoto = function() {
+            if (!videoStream) {
+                showModal("Error", "Camera is not running.");
+                return;
+            }
+
+            // Set canvas dimensions to match the video
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            
+            const context = canvasElement.getContext('2d');
+            // Draw the video frame onto the canvas
+            context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+            // Get base64 image data
+            const capturedImageBase64 = canvasElement.toDataURL('image/png').split(',')[1];
+            
+            // Stop the camera stream
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+            videoElement.classList.add('hidden');
+            
+            // Hide capture controls and start processing
+            captureBtn.classList.add('hidden');
+            processImage(capturedImageBase64); // Pass the image data
+        };
+
+        // --- AI Image Generation (Sketch Style) ---
+
+        async function callImageGenerationApi(prompt, base64Data) {
+            updateStatus("Processing image with AI model...", 'text-orange-600');
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: "image/png", data: base64Data } }
+                    ]
+                }],
+                generationConfig: {
+                    responseModalities: ['IMAGE']
+                },
+            };
+
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API returned status ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    const base64Image = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    
+                    if (base64Image) {
+                        return `data:image/png;base64,${base64Image}`;
+                    } else {
+                        throw new Error("Invalid response structure or missing image data from API.");
+                    }
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed:`, error);
+                    if (i < 2) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        updateStatus(`Retrying AI generation in ${Math.round(delay/1000)} seconds...`, 'text-yellow-600');
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        throw new Error("Failed to generate image after multiple retries.");
+                    }
+                }
+            }
+        }
+
+
+        async function processImage(base64Data) {
+            showStage('stageProcessing');
+            updateStatus("Step 3: Uploading photo and starting AI processing...", 'text-orange-600');
+
+            // Prompt specifically for a beautiful sketch style
+            const sketchPrompt = "Transform this portrait photograph into a beautiful, artistic sketch drawing. Use clean lines, subtle shading, and a refined, elegant aesthetic. The output should look like a professional pencil or charcoal sketch, enhancing the subject's features in an artistic manner without cartoonish distortion.";
+
+            try {
+                const imageUrl = await callImageGenerationApi(sketchPrompt, base64Data);
+                
+                resultImage.src = imageUrl;
+                showStage('stageResult');
+                updateStatus("Success! Your beautiful sketch portrait is ready!", 'text-green-700');
+
+            } catch (error) {
+                console.error("Processing failed:", error);
+                showModal("AI Processing Failed", "The AI image sketch service could not complete the request. Please try again. Details: " + error.message);
+                resetApp(); // Reset to capture stage after error
+            }
+        }
+
+        // --- Reset Logic ---
+
+        window.resetApp = function() {
+            // Clear result image
+            resultImage.src = "";
+            
+            // Ensure video stream is stopped if somehow active
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+
+            // Reset UI to initial state
+            videoElement.classList.add('hidden');
+            launchCameraBtn.classList.remove('hidden');
+            captureBtn.classList.add('hidden');
+            showStage('stageCapture');
+            updateStatus("Step 1: Click 'Launch Camera' to begin your photo capture and sketch transformation!");
+        }
+
+        // Initialize Firebase on load
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
